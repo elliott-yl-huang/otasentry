@@ -30,7 +30,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -e .
+      - run: pip install -e ".[dev,api]"
       - name: Simulate a fleet campaign and gate it
         run: |
           otasentry simulate --out runs/campaign --vehicles 8 --duration 600 --seed 7
