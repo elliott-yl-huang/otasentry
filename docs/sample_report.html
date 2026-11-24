@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OTA Validation Report</title>
+<style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --ink: #1d232b; --muted: #5d6773; --line: #e2e4e8;
+  --s0: #8a97a8; --s1: #d9622b; --ref: #9aa3ad;
+  --crit: #b42318; --major: #c4640a; --minor: #3b6fb6; --info: #6b7280; --ok: #1f7a4d;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #12161b; --panel: #1a2028; --ink: #e7eaee; --muted: #9aa5b1; --line: #2a323c;
+          --s0: #6b7a8c; --s1: #f08a4b; --ref: #5f6b78; --crit: #f0645a; --major: #f0a050; --minor: #78a6e8;
+          --info: #9aa5b1; --ok: #4cc38a; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+       font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1120px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 32px 0 10px; }
+.sub { color: var(--muted); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.hero { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; margin-top: 16px; }
+.verdict { font-size: 26px; font-weight: 700; padding: 14px 22px; border-radius: 10px; color: #fff; text-align: center; }
+.v-NO-GO { background: var(--crit); } .v-HOLD { background: var(--major); } .v-GO { background: var(--ok); }
+.kpis { display: flex; flex-wrap: wrap; gap: 18px; }
+.kpi b { display: block; font-size: 20px; } .kpi span { color: var(--muted); font-size: 12px; }
+.narr { white-space: pre-wrap; margin-top: 12px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; }
+.tbl { overflow-x: auto; }
+.sev { font-weight: 700; font-size: 12px; text-transform: uppercase; }
+.sev-critical { color: var(--crit); } .sev-major { color: var(--major); } .sev-minor { color: var(--minor); }
+.sev-info { color: var(--info); }
+.tag { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; font-size: 12px; }
+details.f { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); margin: 8px 0; }
+details.f > summary { cursor: pointer; padding: 10px 14px; list-style: none; display: grid;
+  grid-template-columns: 80px 1fr auto; gap: 10px; align-items: baseline; }
+details.f > summary::-webkit-details-marker { display: none; }
+.fbody { padding: 0 14px 14px; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; }
+.chart { width: 100%; height: auto; }
+.chart .grid { stroke: var(--line); } .chart .ref { stroke: var(--ref); stroke-dasharray: 4 3; }
+.chart .tick { fill: var(--muted); font-size: 10px; }
+.chart .s0 { fill: var(--s0); } .chart .s1 { fill: var(--s1); }
+code { font-size: 12px; } .muted { color: var(--muted); }
+.cov-bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; min-width: 80px; }
+.cov-bar i { display: block; height: 100%; background: var(--s0); }
+@media (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; } .fbody { grid-template-columns: 1fr; }
+  details.f > summary { grid-template-columns: 70px 1fr; } details.f > summary .tag { display: none; }
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>OTA validation: campaign</h1>
+  <div class="sub">8 vehicles &middot; 2.67 h of CAN data &middot;
+    702,846 frames &middot; analyzed in 7.3 s &middot; otasentry 0.1.0</div>
+
+  <section class="panel hero">
+    <div class="verdict v-NO-GO">NO-GO</div>
+    <div>
+      <div class="kpis">
+        <div class="kpi"><b>3</b><span>critical</span></div>
+        <div class="kpi"><b>6</b><span>major</span></div>
+        <div class="kpi"><b>3</b><span>minor</span></div>
+        <div class="kpi"><b>9</b><span>fleet-wide</span></div>
+        <div class="kpi"><b>3</b><span>vehicle-local</span></div>
+      </div>
+      <div class="narr">Campaign campaign: NO-GO - 3 critical regression(s): BMS_Pack; REQ-VC-001; PackCurrent.
+Battery Systems: [critical] BMS_Pack: p99 inter-frame gap 2.09x baseline, drop rate 3.9%; [critical] PackCurrent: residual shifted +1.86 sigma (+4.16 A) for the same context; residual shifted +3.05 sigma (+7.31 A) in high-load regime for the same context; residual shifted +0.83 sigma (+1.27 A) in low-load regime for the same context
+Vehicle Controls: [critical] REQ-VC-001 Park engagement requires standstill: newly failing on 8/8 vehicles (49 samples (4.9 s) violate &#39;VehicleSpeed &lt;= 0.5&#39; while &#39;GearState == 0&#39;); [major] MotorTorqueReq: excursion rate +6.3% of time (&gt;5 sigma episodes)
+Vehicle Networks: [major] REQ-NET-005 Periodic messages meet DBC cycle time: newly failing on 8/8 vehicles (BMS_Pack: p99 212 ms (nominal 100), drops 3.9%)
+Infotainment: [major] REQ-IVI-006 Infotainment heartbeat within 5 s of wake: newly failing on 8/8 vehicles (first frame at 6.54 s (limit 5.0 s))
+Thermal &amp; Climate: [major] New DTC 0x9A2316 from HVAC on 7/8 vehicles after update
+Chassis &amp; Brakes: [major] WheelSpeed_RL: residual spread 8.5x baseline; excursion rate +14.1% of time (&gt;5 sigma episodes); [major] REQ-CH-002 Wheel speeds agree with reference speed while moving: newly failing on 1/8 vehicles (228 samples (22.8 s) violate &#39;abs(WheelSpeed_FL - VehicleSpeed) &lt; 4 and abs(WheelSpeed_FR - VehicleSpeed) &lt; 4 and abs(WheelSpeed_RL - VehicleSpeed) &lt; 4 and abs(WheelSpeed_RR - VehicleSpeed) &lt; 4&#39; while &#39;VehicleSpeed &gt; 10&#39;)
+Likely hardware / vehicle-specific (not attributed to the update): WheelSpeed_RL on SIM1002; REQ-CH-002 on SIM1002; MotorTorqueReq on SIM1005</div>
+      <div class="muted" style="font-size:12px;margin-top:6px">summary source: template</div>
+    </div>
+  </section>
+
+  
+  <h2>Detector evaluation against injected ground truth</h2>
+  <div class="panel tbl">
+    <table>
+      <tr><th>Method</th><th>Recall</th><th>Precision</th><th>Findings</th><th>False positives</th></tr>
+      <tr><td><b>otasentry</b> (context-matched)</td><td>1.0</td><td>0.917</td>
+          <td>12</td><td><code>behavior:MotorTorqueReq:vehicle:SIM1005</code></td></tr>
+      <tr><td>Naive raw-signal diff</td><td>0.429</td><td>0.5</td>
+          <td>16</td><td><code>behavior:WheelSpeed_FL:fleet:SIM1000,SIM1002,SIM1003,SIM1005,SIM1006, behavior:WheelSpeed_FR:fleet:SIM1000,SIM1002,SIM1003,SIM1005,SIM1006, behavior:WheelSpeed_RR:fleet:SIM1000,SIM1002,SIM1003,SIM1005,SIM1006, behavior:MotorTorqueReq:fleet:SIM1000,SIM1002,SIM1003,SIM1005,SIM1006, behavior:MotorSpeed:fleet:SIM1000,SIM1002,SIM1003,SIM1005,SIM1006, behavior:MotorTorqueAct:fleet:SIM1000,SIM1002,SIM1003,SIM1005,SIM1006, behavior:CompressorPower:vehicle:SIM1000, behavior:CabinTemp:vehicle:SIM1000</code></td></tr>
+    </table>
+    <table style="margin-top:12px">
+      <tr><th>Injected regression</th><th>Detected</th><th>Domain correct</th></tr>
+      
+      <tr><td>inverter_efficiency</td><td>yes</td>
+          <td>yes</td></tr>
+      
+      <tr><td>bms_cycle_jitter</td><td>yes</td>
+          <td>yes</td></tr>
+      
+      <tr><td>hvac_new_dtc</td><td>yes</td>
+          <td>yes</td></tr>
+      
+      <tr><td>park_at_speed</td><td>yes</td>
+          <td>yes</td></tr>
+      
+      <tr><td>ivi_boot_delay</td><td>yes</td>
+          <td>yes</td></tr>
+      
+      <tr><td>ivi_cpu_load</td><td>yes</td>
+          <td>yes</td></tr>
+      
+      <tr><td>wheel_sensor_fault</td><td>yes</td>
+          <td>yes</td></tr>
+      
+    </table>
+  </div>
+  
+
+  <h2>Findings</h2>
+  
+  <details class="f" open>
+    <summary>
+      <span class="sev sev-critical">critical</span>
+      <span><b>BMS_Pack</b> &middot; BMS_Pack: p99 inter-frame gap 2.09x baseline, drop rate 3.9%</span>
+      <span class="tag">fleet 8/8 &middot; communication</span>
+    </summary>
+    <div class="fbody">
+      <div><svg viewBox="0 0 560 200" class="chart" role="img" aria-label="p99 inter-frame gap (ms) by vehicle"><line x1="44" x2="548" y1="166.0" y2="166.0" class="grid"/><text x="38" y="169.0" class="tick" text-anchor="end">0</text><line x1="44" x2="548" y1="128.0" y2="128.0" class="grid"/><text x="38" y="131.0" class="tick" text-anchor="end">62.5</text><line x1="44" x2="548" y1="90.0" y2="90.0" class="grid"/><text x="38" y="93.0" class="tick" text-anchor="end">125</text><line x1="44" x2="548" y1="52.0" y2="52.0" class="grid"/><text x="38" y="55.0" class="tick" text-anchor="end">188</text><line x1="44" x2="548" y1="14.0" y2="14.0" class="grid"/><text x="38" y="17.0" class="tick" text-anchor="end">250</text><rect x="53.5" y="104.4" width="20.0" height="61.6" class="s0" rx="2"><title>SIM1000 pre: 101 p99 inter-frame gap (ms)</title></rect><rect x="75.5" y="37.3" width="20.0" height="128.7" class="s1" rx="2"><title>SIM1000 post: 212 p99 inter-frame gap (ms)</title></rect><text x="75.5" y="180" class="tick" text-anchor="middle">1000</text><rect x="116.5" y="104.4" width="20.0" height="61.6" class="s0" rx="2"><title>SIM1001 pre: 101 p99 inter-frame gap (ms)</title></rect><rect x="138.5" y="36.9" width="20.0" height="129.1" class="s1" rx="2"><title>SIM1001 post: 212 p99 inter-frame gap (ms)</title></rect><text x="138.5" y="180" class="tick" text-anchor="middle">1001</text><rect x="179.5" y="104.3" width="20.0" height="61.7" class="s0" rx="2"><title>SIM1002 pre: 101 p99 inter-frame gap (ms)</title></rect><rect x="201.5" y="38.6" width="20.0" height="127.4" class="s1" rx="2"><title>SIM1002 post: 210 p99 inter-frame gap (ms)</title></rect><text x="201.5" y="180" class="tick" text-anchor="middle">1002</text><rect x="242.5" y="104.4" width="20.0" height="61.6" class="s0" rx="2"><title>SIM1003 pre: 101 p99 inter-frame gap (ms)</title></rect><rect x="264.5" y="36.7" width="20.0" height="129.3" class="s1" rx="2"><title>SIM1003 post: 213 p99 inter-frame gap (ms)</title></rect><text x="264.5" y="180" class="tick" text-anchor="middle">1003</text><rect x="305.5" y="104.4" width="20.0" height="61.6" class="s0" rx="2"><title>SIM1004 pre: 101 p99 inter-frame gap (ms)</title></rect><rect x="327.5" y="37.3" width="20.0" height="128.7" class="s1" rx="2"><title>SIM1004 post: 212 p99 inter-frame gap (ms)</title></rect><text x="327.5" y="180" class="tick" text-anchor="middle">1004</text><rect x="368.5" y="104.4" width="20.0" height="61.6" class="s0" rx="2"><title>SIM1005 pre: 101 p99 inter-frame gap (ms)</title></rect><rect x="390.5" y="39.2" width="20.0" height="126.8" class="s1" rx="2"><title>SIM1005 post: 208 p99 inter-frame gap (ms)</title></rect><text x="390.5" y="180" class="tick" text-anchor="middle">1005</text><rect x="431.5" y="104.4" width="20.0" height="61.6" class="s0" rx="2"><title>SIM1006 pre: 101 p99 inter-frame gap (ms)</title></rect><rect x="453.5" y="38.5" width="20.0" height="127.5" class="s1" rx="2"><title>SIM1006 post: 210 p99 inter-frame gap (ms)</title></rect><text x="453.5" y="180" class="tick" text-anchor="middle">1006</text><rect x="494.5" y="104.4" width="20.0" height="61.6" class="s0" rx="2"><title>SIM1007 pre: 101 p99 inter-frame gap (ms)</title></rect><rect x="516.5" y="35.3" width="20.0" height="130.7" class="s1" rx="2"><title>SIM1007 post: 215 p99 inter-frame gap (ms)</title></rect><text x="516.5" y="180" class="tick" text-anchor="middle">1007</text><rect x="44" y="188" width="10" height="10" class="s0" rx="2"/><text x="58" y="197" class="tick">pre</text><rect x="83" y="188" width="10" height="10" class="s1" rx="2"/><text x="97" y="197" class="tick">post</text><text x="548" y="197" class="tick" text-anchor="end">p99 inter-frame gap (ms)</text></svg></div>
+      <div>
+        <table>
+          <tr><th>Kind</th><td>timing (timing)</td></tr>
+          <tr><th>ECU / owner</th><td>BMS &middot; Battery Systems</td></tr>
+          <tr><th>Criticality</th><td>safety</td></tr>
+          <tr><th>Attribution</th><td>Frame timing / delivery changed; check gateway routing, bus load and transmit scheduling</td></tr>
+          <tr><th>Vehicles</th><td>SIM1000, SIM1001, SIM1002, SIM1003, SIM1004, SIM1005, SIM1006, SIM1007</td></tr>
+          
+          <tr><th>Similar known issues</th><td><div><b>KI-0101</b> BMS status frames delayed under high gateway bus load <span class="muted">(0.302)</span></div></td></tr>
+          <tr><th>Fingerprint</th><td><code>0b47ad6cd313</code></td></tr>
+        </table>
+      </div>
+    </div>
+  </details>
+  
+  <details class="f" open>
+    <summary>
+      <span class="sev sev-critical">critical</span>
+      <span><b>REQ-VC-001</b> &middot; REQ-VC-001 Park engagement requires standstill: newly failing on 8/8 vehicles (49 samples (4.9 s) violate &#39;VehicleSpeed &lt;= 0.5&#39; while &#39;GearState == 0&#39;)</span>
+      <span class="tag">fleet 8/8 &middot; vehicle-system</span>
+    </summary>
+    <div class="fbody">
+      <div><svg viewBox="0 0 560 200" class="chart" role="img" aria-label="violations by vehicle"><line x1="44" x2="548" y1="166.0" y2="166.0" class="grid"/><text x="38" y="169.0" class="tick" text-anchor="end">0</text><line x1="44" x2="548" y1="128.0" y2="128.0" class="grid"/><text x="38" y="131.0" class="tick" text-anchor="end">25.0</text><line x1="44" x2="548" y1="90.0" y2="90.0" class="grid"/><text x="38" y="93.0" class="tick" text-anchor="end">50.0</text><line x1="44" x2="548" y1="52.0" y2="52.0" class="grid"/><text x="38" y="55.0" class="tick" text-anchor="end">75.0</text><line x1="44" x2="548" y1="14.0" y2="14.0" class="grid"/><text x="38" y="17.0" class="tick" text-anchor="end">100</text><rect x="53.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1000 pre: 0 violations</title></rect><rect x="75.5" y="91.5" width="20.0" height="74.5" class="s1" rx="2"><title>SIM1000 post: 49.0 violations</title></rect><text x="75.5" y="180" class="tick" text-anchor="middle">1000</text><rect x="116.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1001 pre: 0 violations</title></rect><rect x="138.5" y="146.2" width="20.0" height="19.8" class="s1" rx="2"><title>SIM1001 post: 13.0 violations</title></rect><text x="138.5" y="180" class="tick" text-anchor="middle">1001</text><rect x="179.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1002 pre: 0 violations</title></rect><rect x="201.5" y="126.5" width="20.0" height="39.5" class="s1" rx="2"><title>SIM1002 post: 26.0 violations</title></rect><text x="201.5" y="180" class="tick" text-anchor="middle">1002</text><rect x="242.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1003 pre: 0 violations</title></rect><rect x="264.5" y="115.8" width="20.0" height="50.2" class="s1" rx="2"><title>SIM1003 post: 33.0 violations</title></rect><text x="264.5" y="180" class="tick" text-anchor="middle">1003</text><rect x="305.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1004 pre: 0 violations</title></rect><rect x="327.5" y="155.4" width="20.0" height="10.6" class="s1" rx="2"><title>SIM1004 post: 7 violations</title></rect><text x="327.5" y="180" class="tick" text-anchor="middle">1004</text><rect x="368.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1005 pre: 0 violations</title></rect><rect x="390.5" y="115.8" width="20.0" height="50.2" class="s1" rx="2"><title>SIM1005 post: 33.0 violations</title></rect><text x="390.5" y="180" class="tick" text-anchor="middle">1005</text><rect x="431.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1006 pre: 0 violations</title></rect><rect x="453.5" y="74.8" width="20.0" height="91.2" class="s1" rx="2"><title>SIM1006 post: 60.0 violations</title></rect><text x="453.5" y="180" class="tick" text-anchor="middle">1006</text><rect x="494.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1007 pre: 0 violations</title></rect><rect x="516.5" y="156.9" width="20.0" height="9.1" class="s1" rx="2"><title>SIM1007 post: 6 violations</title></rect><text x="516.5" y="180" class="tick" text-anchor="middle">1007</text><rect x="44" y="188" width="10" height="10" class="s0" rx="2"/><text x="58" y="197" class="tick">pre</text><rect x="83" y="188" width="10" height="10" class="s1" rx="2"/><text x="97" y="197" class="tick">post</text><text x="548" y="197" class="tick" text-anchor="end">violations</text></svg></div>
+      <div>
+        <table>
+          <tr><th>Kind</th><td>requirement (rule)</td></tr>
+          <tr><th>ECU / owner</th><td>VCU &middot; Vehicle Controls</td></tr>
+          <tr><th>Criticality</th><td>safety</td></tr>
+          <tr><th>Attribution</th><td>Fleet-wide violation of a cross-ECU safety rule; review function-level logic</td></tr>
+          <tr><th>Vehicles</th><td>SIM1000, SIM1001, SIM1002, SIM1003, SIM1004, SIM1005, SIM1006, SIM1007</td></tr>
+          
+          <tr><th>Similar known issues</th><td><div><b>KI-0104</b> Park lock engaged before standstill <span class="muted">(0.587)</span></div></td></tr>
+          <tr><th>Fingerprint</th><td><code>0b31fe781b2b</code></td></tr>
+        </table>
+      </div>
+    </div>
+  </details>
+  
+  <details class="f" open>
+    <summary>
+      <span class="sev sev-critical">critical</span>
+      <span><b>PackCurrent</b> &middot; PackCurrent: residual shifted +1.86 sigma (+4.16 A) for the same context; residual shifted +3.05 sigma (+7.31 A) in high-load regime for the same context; residual shifted +0.83 sigma (+1.27 A) in low-load regime for the same context</span>
+      <span class="tag">fleet 7/8 &middot; software</span>
+    </summary>
+    <div class="fbody">
+      <div><svg viewBox="0 0 560 200" class="chart" role="img" aria-label="per-vehicle effect"><line x1="44" x2="548" y1="166.0" y2="166.0" class="grid"/><text x="38" y="169.0" class="tick" text-anchor="end">-5</text><line x1="44" x2="548" y1="128.0" y2="128.0" class="grid"/><text x="38" y="131.0" class="tick" text-anchor="end">-2.5</text><line x1="44" x2="548" y1="90.0" y2="90.0" class="grid"/><text x="38" y="93.0" class="tick" text-anchor="end">0</text><line x1="44" x2="548" y1="52.0" y2="52.0" class="grid"/><text x="38" y="55.0" class="tick" text-anchor="end">2.5</text><line x1="44" x2="548" y1="14.0" y2="14.0" class="grid"/><text x="38" y="17.0" class="tick" text-anchor="end">5</text><line x1="44" x2="548" y1="80.9" y2="80.9" class="ref"/><line x1="44" x2="548" y1="99.1" y2="99.1" class="ref"/><rect x="124.5" y="51.0" width="28.0" height="39.0" class="s1" rx="2"><title>SIM1001: +2.57 sigma (context-matched)</title></rect><text x="138.5" y="180" class="tick" text-anchor="middle">1001</text><rect x="187.5" y="43.6" width="28.0" height="46.4" class="s1" rx="2"><title>SIM1002: +3.05 sigma (context-matched)</title></rect><text x="201.5" y="180" class="tick" text-anchor="middle">1002</text><rect x="250.5" y="43.6" width="28.0" height="46.4" class="s1" rx="2"><title>SIM1003: +3.06 sigma (context-matched)</title></rect><text x="264.5" y="180" class="tick" text-anchor="middle">1003</text><rect x="313.5" y="34.2" width="28.0" height="55.8" class="s1" rx="2"><title>SIM1004: +3.67 sigma (context-matched)</title></rect><text x="327.5" y="180" class="tick" text-anchor="middle">1004</text><rect x="376.5" y="17.7" width="28.0" height="72.3" class="s1" rx="2"><title>SIM1005: +4.75 sigma (context-matched)</title></rect><text x="390.5" y="180" class="tick" text-anchor="middle">1005</text><rect x="439.5" y="22.5" width="28.0" height="67.5" class="s1" rx="2"><title>SIM1006: +4.44 sigma (context-matched)</title></rect><text x="453.5" y="180" class="tick" text-anchor="middle">1006</text><text x="44" y="197" class="tick">dashed: significance threshold +/-0.6</text><text x="548" y="197" class="tick" text-anchor="end">sigma (context-matched)</text></svg></div>
+      <div>
+        <table>
+          <tr><th>Kind</th><td>behavior (location, location@low-load, location@high-load)</td></tr>
+          <tr><th>ECU / owner</th><td>BMS &middot; Battery Systems</td></tr>
+          <tr><th>Criticality</th><td>safety</td></tr>
+          <tr><th>Attribution</th><td>Consistent behavioral change across the fleet for identical driving context</td></tr>
+          <tr><th>Vehicles</th><td>SIM1001, SIM1002, SIM1003, SIM1004, SIM1005, SIM1006, SIM1007</td></tr>
+          <tr><th>Model</th><td>R&sup2; 0.997 on held-out vehicles; inputs: <code>VehicleSpeed, AccelPedal, BrakePressed, GearState, AmbientTemp, SOC, HvacSetpoint, Accel, TractivePowerProxy, MotorTorqueAct, MotorSpeed, CompressorPower</code></td></tr>
+          <tr><th>Similar known issues</th><td><div><b>KI-0102</b> Inverter switching frequency calibration raises losses <span class="muted">(0.244)</span></div><div><b>KI-0110</b> Motor temperature model offset after inverter software update <span class="muted">(0.211)</span></div></td></tr>
+          <tr><th>Fingerprint</th><td><code>950cd878a3ff</code></td></tr>
+        </table>
+      </div>
+    </div>
+  </details>
+  
+  <details class="f" >
+    <summary>
+      <span class="sev sev-major">major</span>
+      <span><b>REQ-NET-005</b> &middot; REQ-NET-005 Periodic messages meet DBC cycle time: newly failing on 8/8 vehicles (BMS_Pack: p99 212 ms (nominal 100), drops 3.9%)</span>
+      <span class="tag">fleet 8/8 &middot; communication</span>
+    </summary>
+    <div class="fbody">
+      <div><svg viewBox="0 0 560 200" class="chart" role="img" aria-label="violations by vehicle"><line x1="44" x2="548" y1="166.0" y2="166.0" class="grid"/><text x="38" y="169.0" class="tick" text-anchor="end">0</text><line x1="44" x2="548" y1="128.0" y2="128.0" class="grid"/><text x="38" y="131.0" class="tick" text-anchor="end">0.25</text><line x1="44" x2="548" y1="90.0" y2="90.0" class="grid"/><text x="38" y="93.0" class="tick" text-anchor="end">0.5</text><line x1="44" x2="548" y1="52.0" y2="52.0" class="grid"/><text x="38" y="55.0" class="tick" text-anchor="end">0.75</text><line x1="44" x2="548" y1="14.0" y2="14.0" class="grid"/><text x="38" y="17.0" class="tick" text-anchor="end">1</text><rect x="53.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1000 pre: 0 violations</title></rect><rect x="75.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1000 post: 1 violations</title></rect><text x="75.5" y="180" class="tick" text-anchor="middle">1000</text><rect x="116.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1001 pre: 0 violations</title></rect><rect x="138.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1001 post: 1 violations</title></rect><text x="138.5" y="180" class="tick" text-anchor="middle">1001</text><rect x="179.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1002 pre: 0 violations</title></rect><rect x="201.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1002 post: 1 violations</title></rect><text x="201.5" y="180" class="tick" text-anchor="middle">1002</text><rect x="242.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1003 pre: 0 violations</title></rect><rect x="264.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1003 post: 1 violations</title></rect><text x="264.5" y="180" class="tick" text-anchor="middle">1003</text><rect x="305.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1004 pre: 0 violations</title></rect><rect x="327.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1004 post: 1 violations</title></rect><text x="327.5" y="180" class="tick" text-anchor="middle">1004</text><rect x="368.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1005 pre: 0 violations</title></rect><rect x="390.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1005 post: 1 violations</title></rect><text x="390.5" y="180" class="tick" text-anchor="middle">1005</text><rect x="431.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1006 pre: 0 violations</title></rect><rect x="453.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1006 post: 1 violations</title></rect><text x="453.5" y="180" class="tick" text-anchor="middle">1006</text><rect x="494.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1007 pre: 0 violations</title></rect><rect x="516.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1007 post: 1 violations</title></rect><text x="516.5" y="180" class="tick" text-anchor="middle">1007</text><rect x="44" y="188" width="10" height="10" class="s0" rx="2"/><text x="58" y="197" class="tick">pre</text><rect x="83" y="188" width="10" height="10" class="s1" rx="2"/><text x="97" y="197" class="tick">post</text><text x="548" y="197" class="tick" text-anchor="end">violations</text></svg></div>
+      <div>
+        <table>
+          <tr><th>Kind</th><td>requirement (cycle_time)</td></tr>
+          <tr><th>ECU / owner</th><td>GW &middot; Vehicle Networks</td></tr>
+          <tr><th>Criticality</th><td>performance</td></tr>
+          <tr><th>Attribution</th><td>Frame timing / delivery changed; check gateway routing, bus load and transmit scheduling</td></tr>
+          <tr><th>Vehicles</th><td>SIM1000, SIM1001, SIM1002, SIM1003, SIM1004, SIM1005, SIM1006, SIM1007</td></tr>
+          
+          <tr><th>Similar known issues</th><td><div><b>KI-0115</b> Diagnostic gateway floods bus with event frames <span class="muted">(0.327)</span></div><div><b>KI-0101</b> BMS status frames delayed under high gateway bus load <span class="muted">(0.262)</span></div></td></tr>
+          <tr><th>Fingerprint</th><td><code>603b120f593f</code></td></tr>
+        </table>
+      </div>
+    </div>
+  </details>
+  
+  <details class="f" >
+    <summary>
+      <span class="sev sev-major">major</span>
+      <span><b>REQ-IVI-006</b> &middot; REQ-IVI-006 Infotainment heartbeat within 5 s of wake: newly failing on 8/8 vehicles (first frame at 6.54 s (limit 5.0 s))</span>
+      <span class="tag">fleet 8/8 &middot; software</span>
+    </summary>
+    <div class="fbody">
+      <div><svg viewBox="0 0 560 200" class="chart" role="img" aria-label="violations by vehicle"><line x1="44" x2="548" y1="166.0" y2="166.0" class="grid"/><text x="38" y="169.0" class="tick" text-anchor="end">0</text><line x1="44" x2="548" y1="128.0" y2="128.0" class="grid"/><text x="38" y="131.0" class="tick" text-anchor="end">0.25</text><line x1="44" x2="548" y1="90.0" y2="90.0" class="grid"/><text x="38" y="93.0" class="tick" text-anchor="end">0.5</text><line x1="44" x2="548" y1="52.0" y2="52.0" class="grid"/><text x="38" y="55.0" class="tick" text-anchor="end">0.75</text><line x1="44" x2="548" y1="14.0" y2="14.0" class="grid"/><text x="38" y="17.0" class="tick" text-anchor="end">1</text><rect x="53.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1000 pre: 0 violations</title></rect><rect x="75.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1000 post: 1 violations</title></rect><text x="75.5" y="180" class="tick" text-anchor="middle">1000</text><rect x="116.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1001 pre: 0 violations</title></rect><rect x="138.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1001 post: 1 violations</title></rect><text x="138.5" y="180" class="tick" text-anchor="middle">1001</text><rect x="179.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1002 pre: 0 violations</title></rect><rect x="201.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1002 post: 1 violations</title></rect><text x="201.5" y="180" class="tick" text-anchor="middle">1002</text><rect x="242.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1003 pre: 0 violations</title></rect><rect x="264.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1003 post: 1 violations</title></rect><text x="264.5" y="180" class="tick" text-anchor="middle">1003</text><rect x="305.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1004 pre: 0 violations</title></rect><rect x="327.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1004 post: 1 violations</title></rect><text x="327.5" y="180" class="tick" text-anchor="middle">1004</text><rect x="368.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1005 pre: 0 violations</title></rect><rect x="390.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1005 post: 1 violations</title></rect><text x="390.5" y="180" class="tick" text-anchor="middle">1005</text><rect x="431.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1006 pre: 0 violations</title></rect><rect x="453.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1006 post: 1 violations</title></rect><text x="453.5" y="180" class="tick" text-anchor="middle">1006</text><rect x="494.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1007 pre: 0 violations</title></rect><rect x="516.5" y="14.0" width="20.0" height="152.0" class="s1" rx="2"><title>SIM1007 post: 1 violations</title></rect><text x="516.5" y="180" class="tick" text-anchor="middle">1007</text><rect x="44" y="188" width="10" height="10" class="s0" rx="2"/><text x="58" y="197" class="tick">pre</text><rect x="83" y="188" width="10" height="10" class="s1" rx="2"/><text x="97" y="197" class="tick">post</text><text x="548" y="197" class="tick" text-anchor="end">violations</text></svg></div>
+      <div>
+        <table>
+          <tr><th>Kind</th><td>requirement (startup)</td></tr>
+          <tr><th>ECU / owner</th><td>IVI &middot; Infotainment</td></tr>
+          <tr><th>Criticality</th><td>performance</td></tr>
+          <tr><th>Attribution</th><td>Wake-to-first-frame latency changed fleet-wide; points at boot / init sequencing</td></tr>
+          <tr><th>Vehicles</th><td>SIM1000, SIM1001, SIM1002, SIM1003, SIM1004, SIM1005, SIM1006, SIM1007</td></tr>
+          
+          <tr><th>Similar known issues</th><td><div><b>KI-0105</b> Infotainment cold boot slowed by new media indexing service <span class="muted">(0.338)</span></div><div><b>KI-0106</b> Head unit CPU load elevated by map tile prefetch <span class="muted">(0.134)</span></div></td></tr>
+          <tr><th>Fingerprint</th><td><code>9c02193521db</code></td></tr>
+        </table>
+      </div>
+    </div>
+  </details>
+  
+  <details class="f" >
+    <summary>
+      <span class="sev sev-major">major</span>
+      <span><b>HVAC:0x9A2316</b> &middot; New DTC 0x9A2316 from HVAC on 7/8 vehicles after update</span>
+      <span class="tag">fleet 7/8 &middot; software</span>
+    </summary>
+    <div class="fbody">
+      <div><svg viewBox="0 0 560 200" class="chart" role="img" aria-label="seconds after wake by vehicle"><line x1="44" x2="548" y1="166.0" y2="166.0" class="grid"/><text x="38" y="169.0" class="tick" text-anchor="end">0</text><line x1="44" x2="548" y1="128.0" y2="128.0" class="grid"/><text x="38" y="131.0" class="tick" text-anchor="end">125</text><line x1="44" x2="548" y1="90.0" y2="90.0" class="grid"/><text x="38" y="93.0" class="tick" text-anchor="end">250</text><line x1="44" x2="548" y1="52.0" y2="52.0" class="grid"/><text x="38" y="55.0" class="tick" text-anchor="end">375</text><line x1="44" x2="548" y1="14.0" y2="14.0" class="grid"/><text x="38" y="17.0" class="tick" text-anchor="end">500</text><rect x="64.5" y="78.1" width="20.0" height="87.9" class="s0" rx="2"><title>SIM1000 first seen: 289 seconds after wake</title></rect><text x="75.5" y="180" class="tick" text-anchor="middle">1000</text><rect x="127.5" y="149.4" width="20.0" height="16.6" class="s0" rx="2"><title>SIM1001 first seen: 54.7 seconds after wake</title></rect><text x="138.5" y="180" class="tick" text-anchor="middle">1001</text><rect x="190.5" y="106.0" width="20.0" height="60.0" class="s0" rx="2"><title>SIM1002 first seen: 197 seconds after wake</title></rect><text x="201.5" y="180" class="tick" text-anchor="middle">1002</text><rect x="253.5" y="82.8" width="20.0" height="83.2" class="s0" rx="2"><title>SIM1003 first seen: 274 seconds after wake</title></rect><text x="264.5" y="180" class="tick" text-anchor="middle">1003</text><rect x="316.5" y="118.5" width="20.0" height="47.5" class="s0" rx="2"><title>SIM1004 first seen: 156 seconds after wake</title></rect><text x="327.5" y="180" class="tick" text-anchor="middle">1004</text><rect x="379.5" y="122.3" width="20.0" height="43.7" class="s0" rx="2"><title>SIM1005 first seen: 144 seconds after wake</title></rect><text x="390.5" y="180" class="tick" text-anchor="middle">1005</text><rect x="442.5" y="111.0" width="20.0" height="55.0" class="s0" rx="2"><title>SIM1006 first seen: 181 seconds after wake</title></rect><text x="453.5" y="180" class="tick" text-anchor="middle">1006</text><text x="516.5" y="180" class="tick" text-anchor="middle">1007</text><rect x="44" y="188" width="10" height="10" class="s0" rx="2"/><text x="58" y="197" class="tick">first seen</text><text x="548" y="197" class="tick" text-anchor="end">seconds after wake</text></svg></div>
+      <div>
+        <table>
+          <tr><th>Kind</th><td>dtc (new_dtc)</td></tr>
+          <tr><th>ECU / owner</th><td>HVAC &middot; Thermal &amp; Climate</td></tr>
+          <tr><th>Criticality</th><td>performance</td></tr>
+          <tr><th>Attribution</th><td>New DTC across the fleet right after the update; likely changed diagnostic logic or limits</td></tr>
+          <tr><th>Vehicles</th><td>SIM1000, SIM1001, SIM1002, SIM1003, SIM1004, SIM1005, SIM1006</td></tr>
+          
+          <tr><th>Similar known issues</th><td><div><b>KI-0103</b> Climate compressor refrigerant pressure sensor DTC after HVAC software update <span class="muted">(0.576)</span></div><div><b>KI-0111</b> Cabin temperature overshoot with new climate control gains <span class="muted">(0.124)</span></div></td></tr>
+          <tr><th>Fingerprint</th><td><code>c508178f979e</code></td></tr>
+        </table>
+      </div>
+    </div>
+  </details>
+  
+  <details class="f" >
+    <summary>
+      <span class="sev sev-major">major</span>
+      <span><b>WheelSpeed_RL</b> &middot; WheelSpeed_RL: residual spread 8.5x baseline; excursion rate +14.1% of time (&gt;5 sigma episodes)</span>
+      <span class="tag">vehicle 1/8 &middot; hardware</span>
+    </summary>
+    <div class="fbody">
+      <div><svg viewBox="0 0 560 200" class="chart" role="img" aria-label="per-vehicle effect"><line x1="44" x2="548" y1="166.0" y2="166.0" class="grid"/><text x="38" y="169.0" class="tick" text-anchor="end">-5</text><line x1="44" x2="548" y1="128.0" y2="128.0" class="grid"/><text x="38" y="131.0" class="tick" text-anchor="end">-2.5</text><line x1="44" x2="548" y1="90.0" y2="90.0" class="grid"/><text x="38" y="93.0" class="tick" text-anchor="end">0</text><line x1="44" x2="548" y1="52.0" y2="52.0" class="grid"/><text x="38" y="55.0" class="tick" text-anchor="end">2.5</text><line x1="44" x2="548" y1="14.0" y2="14.0" class="grid"/><text x="38" y="17.0" class="tick" text-anchor="end">5</text><line x1="44" x2="548" y1="74.8" y2="74.8" class="ref"/><line x1="44" x2="548" y1="105.2" y2="105.2" class="ref"/><rect x="61.5" y="55.7" width="28.0" height="34.3" class="s0" rx="2"><title>SIM1000: +2.26 log2 spread ratio</title></rect><text x="75.5" y="180" class="tick" text-anchor="middle">1000</text><rect x="124.5" y="87.4" width="28.0" height="2.6" class="s0" rx="2"><title>SIM1001: +0.17 log2 spread ratio</title></rect><text x="138.5" y="180" class="tick" text-anchor="middle">1001</text><rect x="187.5" y="43.1" width="28.0" height="46.9" class="s1" rx="2"><title>SIM1002: +3.08 log2 spread ratio</title></rect><text x="201.5" y="180" class="tick" text-anchor="middle">1002</text><rect x="250.5" y="77.2" width="28.0" height="12.8" class="s0" rx="2"><title>SIM1003: +0.84 log2 spread ratio</title></rect><text x="264.5" y="180" class="tick" text-anchor="middle">1003</text><rect x="313.5" y="90.0" width="28.0" height="21.5" class="s0" rx="2"><title>SIM1004: -1.42 log2 spread ratio</title></rect><text x="327.5" y="180" class="tick" text-anchor="middle">1004</text><rect x="376.5" y="66.4" width="28.0" height="23.6" class="s0" rx="2"><title>SIM1005: +1.55 log2 spread ratio</title></rect><text x="390.5" y="180" class="tick" text-anchor="middle">1005</text><rect x="439.5" y="63.3" width="28.0" height="26.7" class="s0" rx="2"><title>SIM1006: +1.76 log2 spread ratio</title></rect><text x="453.5" y="180" class="tick" text-anchor="middle">1006</text><rect x="502.5" y="90.0" width="28.0" height="30.4" class="s0" rx="2"><title>SIM1007: -2.00 log2 spread ratio</title></rect><text x="516.5" y="180" class="tick" text-anchor="middle">1007</text><text x="44" y="197" class="tick">dashed: significance threshold +/-1</text><text x="548" y="197" class="tick" text-anchor="end">log2 spread ratio</text></svg></div>
+      <div>
+        <table>
+          <tr><th>Kind</th><td>behavior (dispersion, tail)</td></tr>
+          <tr><th>ECU / owner</th><td>ABS &middot; Chassis &amp; Brakes</td></tr>
+          <tr><th>Criticality</th><td>safety</td></tr>
+          <tr><th>Attribution</th><td>Isolated to SIM1002 (12% of fleet); an update would affect all vehicles alike, so suspect a component, harness or vehicle-specific fault</td></tr>
+          <tr><th>Vehicles</th><td>SIM1002</td></tr>
+          <tr><th>Model</th><td>R&sup2; 1.0 on held-out vehicles; inputs: <code>VehicleSpeed, AccelPedal, BrakePressed, GearState, AmbientTemp, SOC, HvacSetpoint, Accel, TractivePowerProxy</code></td></tr>
+          <tr><th>Similar known issues</th><td><div><b>KI-0107</b> Rear-left wheel speed sensor intermittent signal <span class="muted">(0.24)</span></div><div><b>KI-0113</b> Inverter temperature sensor open circuit <span class="muted">(0.151)</span></div></td></tr>
+          <tr><th>Fingerprint</th><td><code>fc243efecd61</code></td></tr>
+        </table>
+      </div>
+    </div>
+  </details>
+  
+  <details class="f" >
+    <summary>
+      <span class="sev sev-major">major</span>
+      <span><b>REQ-CH-002</b> &middot; REQ-CH-002 Wheel speeds agree with reference speed while moving: newly failing on 1/8 vehicles (228 samples (22.8 s) violate &#39;abs(WheelSpeed_FL - VehicleSpeed) &lt; 4 and abs(WheelSpeed_FR - VehicleSpeed) &lt; 4 and abs(WheelSpeed_RL - VehicleSpeed) &lt; 4 and abs(WheelSpeed_RR - VehicleSpeed) &lt; 4&#39; while &#39;VehicleSpeed &gt; 10&#39;)</span>
+      <span class="tag">vehicle 1/8 &middot; hardware</span>
+    </summary>
+    <div class="fbody">
+      <div><svg viewBox="0 0 560 200" class="chart" role="img" aria-label="violations by vehicle"><line x1="44" x2="548" y1="166.0" y2="166.0" class="grid"/><text x="38" y="169.0" class="tick" text-anchor="end">0</text><line x1="44" x2="548" y1="128.0" y2="128.0" class="grid"/><text x="38" y="131.0" class="tick" text-anchor="end">62.5</text><line x1="44" x2="548" y1="90.0" y2="90.0" class="grid"/><text x="38" y="93.0" class="tick" text-anchor="end">125</text><line x1="44" x2="548" y1="52.0" y2="52.0" class="grid"/><text x="38" y="55.0" class="tick" text-anchor="end">188</text><line x1="44" x2="548" y1="14.0" y2="14.0" class="grid"/><text x="38" y="17.0" class="tick" text-anchor="end">250</text><rect x="53.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1000 pre: 0 violations</title></rect><rect x="75.5" y="166.0" width="20.0" height="0.0" class="s1" rx="2"><title>SIM1000 post: 0 violations</title></rect><text x="75.5" y="180" class="tick" text-anchor="middle">1000</text><rect x="116.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1001 pre: 0 violations</title></rect><rect x="138.5" y="166.0" width="20.0" height="0.0" class="s1" rx="2"><title>SIM1001 post: 0 violations</title></rect><text x="138.5" y="180" class="tick" text-anchor="middle">1001</text><rect x="179.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1002 pre: 0 violations</title></rect><rect x="201.5" y="27.4" width="20.0" height="138.6" class="s1" rx="2"><title>SIM1002 post: 228 violations</title></rect><text x="201.5" y="180" class="tick" text-anchor="middle">1002</text><rect x="242.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1003 pre: 0 violations</title></rect><rect x="264.5" y="166.0" width="20.0" height="0.0" class="s1" rx="2"><title>SIM1003 post: 0 violations</title></rect><text x="264.5" y="180" class="tick" text-anchor="middle">1003</text><rect x="305.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1004 pre: 0 violations</title></rect><rect x="327.5" y="166.0" width="20.0" height="0.0" class="s1" rx="2"><title>SIM1004 post: 0 violations</title></rect><text x="327.5" y="180" class="tick" text-anchor="middle">1004</text><rect x="368.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1005 pre: 0 violations</title></rect><rect x="390.5" y="166.0" width="20.0" height="0.0" class="s1" rx="2"><title>SIM1005 post: 0 violations</title></rect><text x="390.5" y="180" class="tick" text-anchor="middle">1005</text><rect x="431.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1006 pre: 0 violations</title></rect><rect x="453.5" y="166.0" width="20.0" height="0.0" class="s1" rx="2"><title>SIM1006 post: 0 violations</title></rect><text x="453.5" y="180" class="tick" text-anchor="middle">1006</text><rect x="494.5" y="166.0" width="20.0" height="0.0" class="s0" rx="2"><title>SIM1007 pre: 0 violations</title></rect><rect x="516.5" y="166.0" width="20.0" height="0.0" class="s1" rx="2"><title>SIM1007 post: 0 violations</title></rect><text x="516.5" y="180" class="tick" text-anchor="middle">1007</text><rect x="44" y="188" width="10" height="10" class="s0" rx="2"/><text x="58" y="197" class="tick">pre</text><rect x="83" y="188" width="10" height="10" class="s1" rx="2"/><text x="97" y="197" class="tick">post</text><text x="548" y="197" class="tick" text-anchor="end">violations</text></svg></div>
+      <div>
+        <table>
+          <tr><th>Kind</th><td>requirement (rule)</td></tr>
+          <tr><th>ECU / owner</th><td>ABS &middot; Chassis &amp; Brakes</td></tr>
+          <tr><th>Criticality</th><td>safety</td></tr>
+          <tr><th>Attribution</th><td>Isolated to SIM1002 (12% of fleet); an update would affect all vehicles alike, so suspect a component, harness or vehicle-specific fault</td></tr>
+          <tr><th>Vehicles</th><td>SIM1002</td></tr>
+          
+          <tr><th>Similar known issues</th><td><div><b>KI-0107</b> Rear-left wheel speed sensor intermittent signal <span class="muted">(0.287)</span></div><div><b>KI-0104</b> Park lock engaged before standstill <span class="muted">(0.184)</span></div></td></tr>
+          <tr><th>Fingerprint</th><td><code>833054c7499f</code></td></tr>
+        </table>
+      </div>
+    </div>
+  </details>
+  
+  <details class="f" >
+    <summary>
+      <span class="sev sev-major">major</span>
+      <span><b>MotorTorqueReq</b> &middot; MotorTorqueReq: excursion rate +6.3% of time (&gt;5 sigma episodes)</span>
+      <span class="tag">vehicle 1/8 &middot; hardware</span>
+    </summary>
+    <div class="fbody">
+      <div><svg viewBox="0 0 560 200" class="chart" role="img" aria-label="per-vehicle effect"><line x1="44" x2="548" y1="166.0" y2="166.0" class="grid"/><text x="38" y="169.0" class="tick" text-anchor="end">-0.1</text><line x1="44" x2="548" y1="128.0" y2="128.0" class="grid"/><text x="38" y="131.0" class="tick" text-anchor="end">-0.05</text><line x1="44" x2="548" y1="90.0" y2="90.0" class="grid"/><text x="38" y="93.0" class="tick" text-anchor="end">0</text><line x1="44" x2="548" y1="52.0" y2="52.0" class="grid"/><text x="38" y="55.0" class="tick" text-anchor="end">0.05</text><line x1="44" x2="548" y1="14.0" y2="14.0" class="grid"/><text x="38" y="17.0" class="tick" text-anchor="end">0.1</text><line x1="44" x2="548" y1="74.8" y2="74.8" class="ref"/><line x1="44" x2="548" y1="105.2" y2="105.2" class="ref"/><rect x="61.5" y="49.7" width="28.0" height="40.3" class="s0" rx="2"><title>SIM1000: +0.05 excursion rate delta</title></rect><text x="75.5" y="180" class="tick" text-anchor="middle">1000</text><rect x="124.5" y="75.6" width="28.0" height="14.4" class="s0" rx="2"><title>SIM1001: +0.02 excursion rate delta</title></rect><text x="138.5" y="180" class="tick" text-anchor="middle">1001</text><rect x="187.5" y="90.0" width="28.0" height="26.6" class="s0" rx="2"><title>SIM1002: -0.04 excursion rate delta</title></rect><text x="201.5" y="180" class="tick" text-anchor="middle">1002</text><rect x="250.5" y="90.0" width="28.0" height="34.2" class="s0" rx="2"><title>SIM1003: -0.04 excursion rate delta</title></rect><text x="264.5" y="180" class="tick" text-anchor="middle">1003</text><rect x="313.5" y="90.0" width="28.0" height="14.4" class="s0" rx="2"><title>SIM1004: -0.02 excursion rate delta</title></rect><text x="327.5" y="180" class="tick" text-anchor="middle">1004</text><rect x="376.5" y="42.1" width="28.0" height="47.9" class="s1" rx="2"><title>SIM1005: +0.06 excursion rate delta</title></rect><text x="390.5" y="180" class="tick" text-anchor="middle">1005</text><rect x="439.5" y="90.0" width="28.0" height="6.8" class="s0" rx="2"><title>SIM1006: -0.01 excursion rate delta</title></rect><text x="453.5" y="180" class="tick" text-anchor="middle">1006</text><rect x="502.5" y="90.0" width="28.0" height="15.2" class="s0" rx="2"><title>SIM1007: -0.02 excursion rate delta</title></rect><text x="516.5" y="180" class="tick" text-anchor="middle">1007</text><text x="44" y="197" class="tick">dashed: significance threshold +/-0.02</text><text x="548" y="197" class="tick" text-anchor="end">excursion rate delta</text></svg></div>
+      <div>
+        <table>
+          <tr><th>Kind</th><td>behavior (tail)</td></tr>
+          <tr><th>ECU / owner</th><td>VCU &middot; Vehicle Controls</td></tr>
+          <tr><th>Criticality</th><td>safety</td></tr>
+          <tr><th>Attribution</th><td>Isolated to SIM1005 (12% of fleet); an update would affect all vehicles alike, so suspect a component, harness or vehicle-specific fault</td></tr>
+          <tr><th>Vehicles</th><td>SIM1005</td></tr>
+          <tr><th>Model</th><td>R&sup2; 0.994 on held-out vehicles; inputs: <code>VehicleSpeed, AccelPedal, BrakePressed, GearState, AmbientTemp, SOC, HvacSetpoint, Accel, TractivePowerProxy</code></td></tr>
+          <tr><th>Similar known issues</th><td><div><b>KI-0113</b> Inverter temperature sensor open circuit <span class="muted">(0.175)</span></div><div><b>KI-0112</b> Torque request and actual torque mismatch <span class="muted">(0.169)</span></div></td></tr>
+          <tr><th>Fingerprint</th><td><code>79c5ac36cc0d</code></td></tr>
+        </table>
+      </div>
+    </div>
+  </details>
+  
+  <details class="f" >
+    <summary>
+      <span class="sev sev-minor">minor</span>
+      <span><b>IVI_Heartbeat</b> &middot; IVI_Heartbeat: first frame after wake +4.82 s later than baseline</span>
+      <span class="tag">fleet 8/8 &middot; software</span>
+    </summary>
+    <div class="fbody">
+      <div><svg viewBox="0 0 560 200" class="chart" role="img" aria-label="first frame after wake (s) by vehicle"><line x1="44" x2="548" y1="166.0" y2="166.0" class="grid"/><text x="38" y="169.0" class="tick" text-anchor="end">0</text><line x1="44" x2="548" y1="128.0" y2="128.0" class="grid"/><text x="38" y="131.0" class="tick" text-anchor="end">2.5</text><line x1="44" x2="548" y1="90.0" y2="90.0" class="grid"/><text x="38" y="93.0" class="tick" text-anchor="end">5</text><line x1="44" x2="548" y1="52.0" y2="52.0" class="grid"/><text x="38" y="55.0" class="tick" text-anchor="end">7.5</text><line x1="44" x2="548" y1="14.0" y2="14.0" class="grid"/><text x="38" y="17.0" class="tick" text-anchor="end">10.0</text><rect x="53.5" y="136.5" width="20.0" height="29.5" class="s0" rx="2"><title>SIM1000 pre: 1.9 first frame after wake (s)</title></rect><rect x="75.5" y="66.6" width="20.0" height="99.4" class="s1" rx="2"><title>SIM1000 post: 6.5 first frame after wake (s)</title></rect><text x="75.5" y="180" class="tick" text-anchor="middle">1000</text><rect x="116.5" y="132.0" width="20.0" height="34.0" class="s0" rx="2"><title>SIM1001 pre: 2.2 first frame after wake (s)</title></rect><rect x="138.5" y="51.8" width="20.0" height="114.2" class="s1" rx="2"><title>SIM1001 post: 7.5 first frame after wake (s)</title></rect><text x="138.5" y="180" class="tick" text-anchor="middle">1001</text><rect x="179.5" y="143.2" width="20.0" height="22.8" class="s0" rx="2"><title>SIM1002 pre: 1.5 first frame after wake (s)</title></rect><rect x="201.5" y="64.3" width="20.0" height="101.7" class="s1" rx="2"><title>SIM1002 post: 6.7 first frame after wake (s)</title></rect><text x="201.5" y="180" class="tick" text-anchor="middle">1002</text><rect x="242.5" y="134.5" width="20.0" height="31.5" class="s0" rx="2"><title>SIM1003 pre: 2.1 first frame after wake (s)</title></rect><rect x="264.5" y="63.6" width="20.0" height="102.4" class="s1" rx="2"><title>SIM1003 post: 6.7 first frame after wake (s)</title></rect><text x="264.5" y="180" class="tick" text-anchor="middle">1003</text><rect x="305.5" y="142.0" width="20.0" height="24.0" class="s0" rx="2"><title>SIM1004 pre: 1.6 first frame after wake (s)</title></rect><rect x="327.5" y="69.6" width="20.0" height="96.4" class="s1" rx="2"><title>SIM1004 post: 6.3 first frame after wake (s)</title></rect><text x="327.5" y="180" class="tick" text-anchor="middle">1004</text><rect x="368.5" y="135.9" width="20.0" height="30.1" class="s0" rx="2"><title>SIM1005 pre: 2 first frame after wake (s)</title></rect><rect x="390.5" y="68.1" width="20.0" height="97.9" class="s1" rx="2"><title>SIM1005 post: 6.4 first frame after wake (s)</title></rect><text x="390.5" y="180" class="tick" text-anchor="middle">1005</text><rect x="431.5" y="134.2" width="20.0" height="31.8" class="s0" rx="2"><title>SIM1006 pre: 2.1 first frame after wake (s)</title></rect><rect x="453.5" y="60.1" width="20.0" height="105.9" class="s1" rx="2"><title>SIM1006 post: 7 first frame after wake (s)</title></rect><text x="453.5" y="180" class="tick" text-anchor="middle">1006</text><rect x="494.5" y="143.5" width="20.0" height="22.5" class="s0" rx="2"><title>SIM1007 pre: 1.5 first frame after wake (s)</title></rect><rect x="516.5" y="57.5" width="20.0" height="108.5" class="s1" rx="2"><title>SIM1007 post: 7.1 first frame after wake (s)</title></rect><text x="516.5" y="180" class="tick" text-anchor="middle">1007</text><rect x="44" y="188" width="10" height="10" class="s0" rx="2"/><text x="58" y="197" class="tick">pre</text><rect x="83" y="188" width="10" height="10" class="s1" rx="2"/><text x="97" y="197" class="tick">post</text><text x="548" y="197" class="tick" text-anchor="end">first frame after wake (s)</text></svg></div>
+      <div>
+        <table>
+          <tr><th>Kind</th><td>startup (startup)</td></tr>
+          <tr><th>ECU / owner</th><td>IVI &middot; Infotainment</td></tr>
+          <tr><th>Criticality</th><td>comfort</td></tr>
+          <tr><th>Attribution</th><td>Wake-to-first-frame latency changed fleet-wide; points at boot / init sequencing</td></tr>
+          <tr><th>Vehicles</th><td>SIM1000, SIM1001, SIM1002, SIM1003, SIM1004, SIM1005, SIM1006, SIM1007</td></tr>
+          
+          <tr><th>Similar known issues</th><td><div><b>KI-0105</b> Infotainment cold boot slowed by new media indexing service <span class="muted">(0.46)</span></div></td></tr>
+          <tr><th>Fingerprint</th><td><code>17e57a4f1b41</code></td></tr>
+        </table>
+      </div>
+    </div>
+  </details>
+  
+  <details class="f" >
+    <summary>
+      <span class="sev sev-minor">minor</span>
+      <span><b>CpuLoad</b> &middot; CpuLoad: residual shifted +4.39 sigma (+11.9 %) for the same context; excursion rate +24.3% of time (&gt;5 sigma episodes)</span>
+      <span class="tag">fleet 8/8 &middot; software</span>
+    </summary>
+    <div class="fbody">
+      <div><svg viewBox="0 0 560 200" class="chart" role="img" aria-label="per-vehicle effect"><line x1="44" x2="548" y1="166.0" y2="166.0" class="grid"/><text x="38" y="169.0" class="tick" text-anchor="end">-10.0</text><line x1="44" x2="548" y1="128.0" y2="128.0" class="grid"/><text x="38" y="131.0" class="tick" text-anchor="end">-5</text><line x1="44" x2="548" y1="90.0" y2="90.0" class="grid"/><text x="38" y="93.0" class="tick" text-anchor="end">0</text><line x1="44" x2="548" y1="52.0" y2="52.0" class="grid"/><text x="38" y="55.0" class="tick" text-anchor="end">5</text><line x1="44" x2="548" y1="14.0" y2="14.0" class="grid"/><text x="38" y="17.0" class="tick" text-anchor="end">10.0</text><line x1="44" x2="548" y1="85.4" y2="85.4" class="ref"/><line x1="44" x2="548" y1="94.6" y2="94.6" class="ref"/><rect x="61.5" y="59.2" width="28.0" height="30.8" class="s1" rx="2"><title>SIM1000: +4.06 sigma (context-matched)</title></rect><text x="75.5" y="180" class="tick" text-anchor="middle">1000</text><rect x="124.5" y="54.9" width="28.0" height="35.1" class="s1" rx="2"><title>SIM1001: +4.61 sigma (context-matched)</title></rect><text x="138.5" y="180" class="tick" text-anchor="middle">1001</text><rect x="187.5" y="52.7" width="28.0" height="37.3" class="s1" rx="2"><title>SIM1002: +4.91 sigma (context-matched)</title></rect><text x="201.5" y="180" class="tick" text-anchor="middle">1002</text><rect x="250.5" y="58.8" width="28.0" height="31.2" class="s1" rx="2"><title>SIM1003: +4.11 sigma (context-matched)</title></rect><text x="264.5" y="180" class="tick" text-anchor="middle">1003</text><rect x="313.5" y="50.8" width="28.0" height="39.2" class="s1" rx="2"><title>SIM1004: +5.16 sigma (context-matched)</title></rect><text x="327.5" y="180" class="tick" text-anchor="middle">1004</text><rect x="376.5" y="58.3" width="28.0" height="31.7" class="s1" rx="2"><title>SIM1005: +4.17 sigma (context-matched)</title></rect><text x="390.5" y="180" class="tick" text-anchor="middle">1005</text><rect x="439.5" y="58.8" width="28.0" height="31.2" class="s1" rx="2"><title>SIM1006: +4.11 sigma (context-matched)</title></rect><text x="453.5" y="180" class="tick" text-anchor="middle">1006</text><rect x="502.5" y="51.6" width="28.0" height="38.4" class="s1" rx="2"><title>SIM1007: +5.05 sigma (context-matched)</title></rect><text x="516.5" y="180" class="tick" text-anchor="middle">1007</text><text x="44" y="197" class="tick">dashed: significance threshold +/-0.6</text><text x="548" y="197" class="tick" text-anchor="end">sigma (context-matched)</text></svg></div>
+      <div>
+        <table>
+          <tr><th>Kind</th><td>behavior (location, tail)</td></tr>
+          <tr><th>ECU / owner</th><td>IVI &middot; Infotainment</td></tr>
+          <tr><th>Criticality</th><td>comfort</td></tr>
+          <tr><th>Attribution</th><td>Consistent behavioral change across the fleet for identical driving context</td></tr>
+          <tr><th>Vehicles</th><td>SIM1000, SIM1001, SIM1002, SIM1003, SIM1004, SIM1005, SIM1006, SIM1007</td></tr>
+          <tr><th>Model</th><td>R&sup2; 0.649 on held-out vehicles; inputs: <code>VehicleSpeed, AccelPedal, BrakePressed, GearState, AmbientTemp, SOC, HvacSetpoint, Accel, TractivePowerProxy, Speed_ewm30, Load_ewm60, Load_ewm300, Speed2_ewm300, WarmupFactor</code></td></tr>
+          <tr><th>Similar known issues</th><td><div><b>KI-0106</b> Head unit CPU load elevated by map tile prefetch <span class="muted">(0.204)</span></div><div><b>KI-0110</b> Motor temperature model offset after inverter software update <span class="muted">(0.139)</span></div></td></tr>
+          <tr><th>Fingerprint</th><td><code>54aacdf58c09</code></td></tr>
+        </table>
+      </div>
+    </div>
+  </details>
+  
+  <details class="f" >
+    <summary>
+      <span class="sev sev-minor">minor</span>
+      <span><b>CpuTemp</b> &middot; CpuTemp: residual spread 2.3x baseline; excursion rate +53.9% of time (&gt;5 sigma episodes)</span>
+      <span class="tag">fleet 4/8 &middot; software</span>
+    </summary>
+    <div class="fbody">
+      <div><svg viewBox="0 0 560 200" class="chart" role="img" aria-label="per-vehicle effect"><line x1="44" x2="548" y1="166.0" y2="166.0" class="grid"/><text x="38" y="169.0" class="tick" text-anchor="end">-2</text><line x1="44" x2="548" y1="128.0" y2="128.0" class="grid"/><text x="38" y="131.0" class="tick" text-anchor="end">-1</text><line x1="44" x2="548" y1="90.0" y2="90.0" class="grid"/><text x="38" y="93.0" class="tick" text-anchor="end">0</text><line x1="44" x2="548" y1="52.0" y2="52.0" class="grid"/><text x="38" y="55.0" class="tick" text-anchor="end">1</text><line x1="44" x2="548" y1="14.0" y2="14.0" class="grid"/><text x="38" y="17.0" class="tick" text-anchor="end">2</text><line x1="44" x2="548" y1="52.0" y2="52.0" class="ref"/><line x1="44" x2="548" y1="128.0" y2="128.0" class="ref"/><rect x="61.5" y="19.4" width="28.0" height="70.6" class="s1" rx="2"><title>SIM1000: +1.86 log2 spread ratio</title></rect><text x="75.5" y="180" class="tick" text-anchor="middle">1000</text><rect x="124.5" y="47.0" width="28.0" height="43.0" class="s1" rx="2"><title>SIM1001: +1.13 log2 spread ratio</title></rect><text x="138.5" y="180" class="tick" text-anchor="middle">1001</text><rect x="187.5" y="63.4" width="28.0" height="26.6" class="s1" rx="2"><title>SIM1002: +0.70 log2 spread ratio</title></rect><text x="201.5" y="180" class="tick" text-anchor="middle">1002</text><rect x="250.5" y="47.0" width="28.0" height="43.0" class="s0" rx="2"><title>SIM1003: +1.13 log2 spread ratio</title></rect><text x="264.5" y="180" class="tick" text-anchor="middle">1003</text><rect x="313.5" y="40.9" width="28.0" height="49.1" class="s0" rx="2"><title>SIM1004: +1.29 log2 spread ratio</title></rect><text x="327.5" y="180" class="tick" text-anchor="middle">1004</text><rect x="376.5" y="44.4" width="28.0" height="45.6" class="s1" rx="2"><title>SIM1005: +1.20 log2 spread ratio</title></rect><text x="390.5" y="180" class="tick" text-anchor="middle">1005</text><text x="44" y="197" class="tick">dashed: significance threshold +/-1</text><text x="548" y="197" class="tick" text-anchor="end">log2 spread ratio</text></svg></div>
+      <div>
+        <table>
+          <tr><th>Kind</th><td>behavior (dispersion, tail)</td></tr>
+          <tr><th>ECU / owner</th><td>IVI &middot; Infotainment</td></tr>
+          <tr><th>Criticality</th><td>comfort</td></tr>
+          <tr><th>Attribution</th><td>Consistent behavioral change across the fleet for identical driving context</td></tr>
+          <tr><th>Vehicles</th><td>SIM1000, SIM1001, SIM1002, SIM1005</td></tr>
+          <tr><th>Model</th><td>R&sup2; 0.758 on held-out vehicles; inputs: <code>VehicleSpeed, AccelPedal, BrakePressed, GearState, AmbientTemp, SOC, HvacSetpoint, Accel, TractivePowerProxy, Speed_ewm30, Load_ewm60, Load_ewm300, Speed2_ewm300, WarmupFactor</code></td></tr>
+          <tr><th>Similar known issues</th><td><div><b>KI-0106</b> Head unit CPU load elevated by map tile prefetch <span class="muted">(0.163)</span></div><div><b>KI-0113</b> Inverter temperature sensor open circuit <span class="muted">(0.122)</span></div></td></tr>
+          <tr><th>Fingerprint</th><td><code>a13370e6c0cc</code></td></tr>
+        </table>
+      </div>
+    </div>
+  </details>
+  
+
+  <h2>Requirements</h2>
+  <div class="panel tbl">
+    <table>
+      <tr><th>ID</th><th>Requirement</th><th>Severity</th><th>Pre pass</th><th>Post pass</th><th>Status</th></tr>
+      
+      <tr><td><code>REQ-VC-001</code></td><td>Park engagement requires standstill</td><td>safety</td>
+          <td>8/8</td>
+          <td>0/8</td>
+          <td>regressed</td></tr>
+      
+      <tr><td><code>REQ-CH-002</code></td><td>Wheel speeds agree with reference speed while moving</td><td>safety</td>
+          <td>8/8</td>
+          <td>7/8</td>
+          <td>regressed</td></tr>
+      
+      <tr><td><code>REQ-BMS-003</code></td><td>Minimum cell voltage stays above 3.0 V</td><td>safety</td>
+          <td>8/8</td>
+          <td>8/8</td>
+          <td>pass</td></tr>
+      
+      <tr><td><code>REQ-PT-004</code></td><td>Inverter temperature below derate threshold</td><td>performance</td>
+          <td>8/8</td>
+          <td>8/8</td>
+          <td>pass</td></tr>
+      
+      <tr><td><code>REQ-NET-005</code></td><td>Periodic messages meet DBC cycle time</td><td>performance</td>
+          <td>8/8</td>
+          <td>0/8</td>
+          <td>regressed</td></tr>
+      
+      <tr><td><code>REQ-IVI-006</code></td><td>Infotainment heartbeat within 5 s of wake</td><td>performance</td>
+          <td>8/8</td>
+          <td>0/8</td>
+          <td>regressed</td></tr>
+      
+      <tr><td><code>REQ-DIAG-007</code></td><td>No new confirmed DTCs after update</td><td>performance</td>
+          <td>-</td>
+          <td>-</td>
+          <td>see DTC findings</td></tr>
+      
+    </table>
+  </div>
+
+  <h2>Baseline coverage</h2>
+  <div class="panel tbl">
+    <p class="muted" style="margin-top:0">Share of post-update operating time whose context (speed, load history, ambient, SOC, ...)
+      was represented in the pre-update baseline. Behavior outside the envelope is not judged; vehicles below
+      60% are excluded from behavioral tests.</p>
+    <table>
+      <tr><th>Vehicle</th><th>Coverage</th><th></th></tr>
+      
+      <tr><td>SIM1000</td><td>99.8%</td><td><div class="cov-bar"><i style="width:99.8%"></i></div></td></tr>
+      
+      <tr><td>SIM1001</td><td>99.8%</td><td><div class="cov-bar"><i style="width:99.8%"></i></div></td></tr>
+      
+      <tr><td>SIM1002</td><td>99.8%</td><td><div class="cov-bar"><i style="width:99.8%"></i></div></td></tr>
+      
+      <tr><td>SIM1003</td><td>99.8%</td><td><div class="cov-bar"><i style="width:99.8%"></i></div></td></tr>
+      
+      <tr><td>SIM1004</td><td>99.8%</td><td><div class="cov-bar"><i style="width:99.8%"></i></div></td></tr>
+      
+      <tr><td>SIM1005</td><td>99.8%</td><td><div class="cov-bar"><i style="width:99.8%"></i></div></td></tr>
+      
+      <tr><td>SIM1006</td><td>91.5%</td><td><div class="cov-bar"><i style="width:91.5%"></i></div></td></tr>
+      
+      <tr><td>SIM1007</td><td>99.8%</td><td><div class="cov-bar"><i style="width:99.8%"></i></div></td></tr>
+      
+    </table>
+  </div>
+
+  <h2>Behavioral models</h2>
+  <div class="panel tbl">
+    <table>
+      <tr><th>Signal</th><th>ECU</th><th>R&sup2; (held-out vehicles)</th><th>Residual scale</th><th>Decorrelation</th><th>Judged</th></tr>
+      
+      <tr><td>MotorTorqueReq</td><td>VCU</td><td>0.9936</td><td>1.6598</td><td>4 samples</td>
+          <td>yes</td></tr>
+      
+      <tr><td>MotorTorqueAct</td><td>INV</td><td>0.9938</td><td>1.593</td><td>4 samples</td>
+          <td>yes</td></tr>
+      
+      <tr><td>MotorSpeed</td><td>INV</td><td>1.0</td><td>1.2904</td><td>1 samples</td>
+          <td>yes</td></tr>
+      
+      <tr><td>InverterTemp</td><td>INV</td><td>0.9835</td><td>1.1162</td><td>116 samples</td>
+          <td>yes</td></tr>
+      
+      <tr><td>MotorTemp</td><td>INV</td><td>0.9532</td><td>1.2197</td><td>143 samples</td>
+          <td>yes</td></tr>
+      
+      <tr><td>PackVoltage</td><td>BMS</td><td>0.9994</td><td>0.2176</td><td>21 samples</td>
+          <td>yes</td></tr>
+      
+      <tr><td>PackCurrent</td><td>BMS</td><td>0.9973</td><td>1.7286</td><td>2 samples</td>
+          <td>yes</td></tr>
+      
+      <tr><td>CellVoltMin</td><td>BMS</td><td>0.9993</td><td>0.0023</td><td>15 samples</td>
+          <td>yes</td></tr>
+      
+      <tr><td>WheelSpeed_FL</td><td>ABS</td><td>0.9999</td><td>0.4347</td><td>42 samples</td>
+          <td>yes</td></tr>
+      
+      <tr><td>WheelSpeed_FR</td><td>ABS</td><td>0.9999</td><td>0.4296</td><td>39 samples</td>
+          <td>yes</td></tr>
+      
+      <tr><td>WheelSpeed_RL</td><td>ABS</td><td>0.9999</td><td>0.4379</td><td>26 samples</td>
+          <td>yes</td></tr>
+      
+      <tr><td>WheelSpeed_RR</td><td>ABS</td><td>0.9999</td><td>0.3643</td><td>37 samples</td>
+          <td>yes</td></tr>
+      
+      <tr><td>CabinTemp</td><td>HVAC</td><td>-1.6365</td><td>2.0429</td><td>198 samples</td>
+          <td>no: unexplained by context (R2 -1.64, baseline spread 1.52 sigma)</td></tr>
+      
+      <tr><td>CompressorPower</td><td>HVAC</td><td>-10.2075</td><td>488.6026</td><td>200 samples</td>
+          <td>no: unexplained by context (R2 -10.21, baseline spread 1.01 sigma)</td></tr>
+      
+      <tr><td>CpuTemp</td><td>IVI</td><td>0.7584</td><td>0.7595</td><td>34 samples</td>
+          <td>yes</td></tr>
+      
+      <tr><td>CpuLoad</td><td>IVI</td><td>0.6485</td><td>2.717</td><td>7 samples</td>
+          <td>yes</td></tr>
+      
+    </table>
+  </div>
+
+  <h2>Message timing (fleet median)</h2>
+  <div class="panel tbl">
+    <table>
+      <tr><th>Message</th><th>Nominal</th><th>p99 pre</th><th>p99 post</th><th>Drops pre</th><th>Drops post</th><th>First frame pre</th><th>First frame post</th></tr>
+      
+      <tr><td>ABS_WheelSpeed</td><td>50 ms</td><td>51.3 ms</td><td>51.3 ms</td>
+          <td>0.0%</td><td>0.0%</td><td>0.03 s</td><td>0.03 s</td></tr>
+      
+      <tr><td>BMS_Pack</td><td>100 ms</td><td>101.3 ms</td><td>211.6 ms</td>
+          <td>0.0%</td><td>3.9%</td><td>0.15 s</td><td>0.16 s</td></tr>
+      
+      <tr><td>HVAC_Status</td><td>500 ms</td><td>501.3 ms</td><td>501.3 ms</td>
+          <td>0.0%</td><td>0.0%</td><td>0.55 s</td><td>0.55 s</td></tr>
+      
+      <tr><td>INV_Status</td><td>50 ms</td><td>51.3 ms</td><td>51.3 ms</td>
+          <td>0.0%</td><td>0.0%</td><td>0.07 s</td><td>0.07 s</td></tr>
+      
+      <tr><td>IVI_Heartbeat</td><td>1000 ms</td><td>1001.3 ms</td><td>1001.3 ms</td>
+          <td>0.0%</td><td>0.0%</td><td>1.96 s</td><td>6.72 s</td></tr>
+      
+      <tr><td>VCU_Drive</td><td>50 ms</td><td>51.3 ms</td><td>51.3 ms</td>
+          <td>0.0%</td><td>0.0%</td><td>0.0 s</td><td>0.0 s</td></tr>
+      
+    </table>
+  </div>
+</main>
+</body>
+</html>

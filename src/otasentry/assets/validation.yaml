@@ -1,0 +1,158 @@
+# otasentry validation profile for the reference EV platform.
+#
+# Context signals describe *how the vehicle was driven and in what environment*.
+# They are treated as exogenous inputs: the behavioral model learns how every
+# response signal reacts to them on the pre-update fleet, so post-update drives
+# can be compared fairly even when they were driven differently.
+
+sampling:
+  model_dt: 0.5        # seconds, grid used by behavioral models
+  rule_dt: 0.1         # seconds, grid used for requirement rules
+
+context:
+  - VehicleSpeed
+  - AccelPedal
+  - BrakePressed
+  - GearState
+  - AmbientTemp
+  - SOC
+  - HvacSetpoint
+
+# Signals that are never modeled (counters, enums, diagnostics).
+exclude:
+  - VCU_AliveCounter
+  - INV_AliveCounter
+  - IVI_AliveCounter
+  - AppCrashCount
+  - DriveMode
+  - DtcSourceEcu
+  - DtcCode
+  - DtcStatus
+
+# Physics-informed context graph: extra inputs for specific responses.
+# Battery current is explained by motor mechanical power plus auxiliary load,
+# so a residual shift isolates conversion efficiency rather than driving style.
+# Never add a signal that *encodes* the response (e.g. PackVoltage for
+# PackCurrent: V = OCV(SOC) - I*R would let the model read the answer back).
+response_context:
+  PackCurrent: [MotorTorqueAct, MotorSpeed, CompressorPower]
+  PackVoltage: [SOC, PackCurrent]
+  CellVoltMin: [SOC, PackCurrent]
+  CpuTemp: [AmbientTemp]
+  CompressorPower: [CabinTemp]      # the climate controller acts on cabin temperature error
+
+# Signals that respond instantaneously to their inputs. They are modeled from
+# current context only; drive-history features are reserved for thermal and
+# other integrating signals (temperatures, cabin climate).
+instantaneous:
+  - MotorTorqueReq
+  - MotorTorqueAct
+  - MotorSpeed
+  - PackCurrent
+  - PackVoltage
+  - CellVoltMin
+  - WheelSpeed_FL
+  - WheelSpeed_FR
+  - WheelSpeed_RL
+  - WheelSpeed_RR
+
+# Engineering significance: smallest median shift (signal units) worth a ticket,
+# applied on top of statistical significance.
+min_delta:
+  default_fraction_of_scale: 0.0
+  WheelSpeed_FL: 1.0
+  WheelSpeed_FR: 1.0
+  WheelSpeed_RL: 1.0
+  WheelSpeed_RR: 1.0
+  InverterTemp: 2.0
+  MotorTemp: 2.0
+  CellTempMax: 2.0
+  CabinTemp: 2.0
+  CpuTemp: 2.0
+  PackCurrent: 1.0
+  MotorTorqueReq: 15.0
+  MotorTorqueAct: 15.0
+  MotorSpeed: 50
+  CompressorPower: 300
+
+thresholds:
+  min_coverage: 0.6         # vehicles with less in-envelope post time are not behavior-tested
+  min_model_r2: 0.5         # judge a signal if the baseline model explains it ...
+  max_baseline_spread: 0.5  # ... or if held-out baseline vehicles agree on its residual level (sigma)
+  alpha: 0.01               # FDR level (Benjamini-Hochberg)
+  location_effect: 0.6      # robust sigmas of residual shift
+  dispersion_log2: 1.0      # 2x residual spread
+  tail_sigma: 5.0
+  tail_rate_min: 0.02
+  fleet_quorum: 0.5         # fraction of vehicles that must agree for a fleet-wide finding
+  local_effect_factor: 3.0  # vehicle-local findings must be this much stronger
+  timing_p99_ratio: 1.25
+  timing_drop_delta: 0.005
+  startup_delta_s: 1.0
+  anomaly_rate_min: 0.08
+  anomaly_rate_ratio: 3.0
+
+ecus:
+  VCU:  {criticality: safety,      team: Vehicle Controls}
+  ABS:  {criticality: safety,      team: Chassis & Brakes}
+  BMS:  {criticality: safety,      team: Battery Systems}
+  INV:  {criticality: performance, team: Powertrain}
+  HVAC: {criticality: comfort,     team: Thermal & Climate}
+  IVI:  {criticality: comfort,     team: Infotainment}
+  GW:   {criticality: performance, team: Vehicle Networks}
+
+requirements:
+  - id: REQ-VC-001
+    title: Park engagement requires standstill
+    type: rule
+    when: "GearState == 0"
+    expect: "VehicleSpeed <= 0.5"
+    severity: safety
+    owner: VCU
+
+  - id: REQ-CH-002
+    title: Wheel speeds agree with reference speed while moving
+    type: rule
+    when: "VehicleSpeed > 10"
+    expect: "abs(WheelSpeed_FL - VehicleSpeed) < 4 and abs(WheelSpeed_FR - VehicleSpeed) < 4 and abs(WheelSpeed_RL - VehicleSpeed) < 4 and abs(WheelSpeed_RR - VehicleSpeed) < 4"
+    severity: safety
+    owner: ABS
+
+  - id: REQ-BMS-003
+    title: Minimum cell voltage stays above 3.0 V
+    type: range
+    signal: CellVoltMin
+    min: 3.0
+    severity: safety
+    owner: BMS
+
+  - id: REQ-PT-004
+    title: Inverter temperature below derate threshold
+    type: range
+    signal: InverterTemp
+    max: 110
+    severity: performance
+    owner: INV
+
+  - id: REQ-NET-005
+    title: Periodic messages meet DBC cycle time
+    type: cycle_time
+    message: "*"
+    p99_tolerance: 1.5
+    max_drop_rate: 0.01
+    severity: performance
+    owner: GW
+
+  - id: REQ-IVI-006
+    title: Infotainment heartbeat within 5 s of wake
+    type: startup
+    message: IVI_Heartbeat
+    max_s: 5.0
+    severity: performance
+    owner: IVI
+
+  - id: REQ-DIAG-007
+    title: No new confirmed DTCs after update
+    type: no_new_dtc
+    severity: performance
+    owner: GW

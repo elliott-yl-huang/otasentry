@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OTA Validation Report</title>
+<style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --ink: #1d232b; --muted: #5d6773; --line: #e2e4e8;
+  --s0: #8a97a8; --s1: #d9622b; --ref: #9aa3ad;
+  --crit: #b42318; --major: #c4640a; --minor: #3b6fb6; --info: #6b7280; --ok: #1f7a4d;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #12161b; --panel: #1a2028; --ink: #e7eaee; --muted: #9aa5b1; --line: #2a323c;
+          --s0: #6b7a8c; --s1: #f08a4b; --ref: #5f6b78; --crit: #f0645a; --major: #f0a050; --minor: #78a6e8;
+          --info: #9aa5b1; --ok: #4cc38a; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+       font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1120px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 32px 0 10px; }
+.sub { color: var(--muted); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.hero { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; margin-top: 16px; }
+.verdict { font-size: 26px; font-weight: 700; padding: 14px 22px; border-radius: 10px; color: #fff; text-align: center; }
+.v-NO-GO { background: var(--crit); } .v-HOLD { background: var(--major); } .v-GO { background: var(--ok); }
+.kpis { display: flex; flex-wrap: wrap; gap: 18px; }
+.kpi b { display: block; font-size: 20px; } .kpi span { color: var(--muted); font-size: 12px; }
+.narr { white-space: pre-wrap; margin-top: 12px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; }
+.tbl { overflow-x: auto; }
+.sev { font-weight: 700; font-size: 12px; text-transform: uppercase; }
+.sev-critical { color: var(--crit); } .sev-major { color: var(--major); } .sev-minor { color: var(--minor); }
+.sev-info { color: var(--info); }
+.tag { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; font-size: 12px; }
+details.f { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); margin: 8px 0; }
+details.f > summary { cursor: pointer; padding: 10px 14px; list-style: none; display: grid;
+  grid-template-columns: 80px 1fr auto; gap: 10px; align-items: baseline; }
+details.f > summary::-webkit-details-marker { display: none; }
+.fbody { padding: 0 14px 14px; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; }
+.chart { width: 100%; height: auto; }
+.chart .grid { stroke: var(--line); } .chart .ref { stroke: var(--ref); stroke-dasharray: 4 3; }
+.chart .tick { fill: var(--muted); font-size: 10px; }
+.chart .s0 { fill: var(--s0); } .chart .s1 { fill: var(--s1); }
+code { font-size: 12px; } .muted { color: var(--muted); }
+.cov-bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; min-width: 80px; }
+.cov-bar i { display: block; height: 100%; background: var(--s0); }
+@media (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; } .fbody { grid-template-columns: 1fr; }
+  details.f > summary { grid-template-columns: 70px 1fr; } details.f > summary .tag { display: none; }
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>OTA validation: {{ r.campaign }}</h1>
+  <div class="sub">{{ r.vehicles|length }} vehicles &middot; {{ r.meta.hours_of_data }} h of CAN data &middot;
+    {{ "{:,}".format(r.meta.frames) }} frames &middot; analyzed in {{ r.meta.analysis_seconds }} s &middot; {{ r.tool }}</div>
+
+  <section class="panel hero">
+    <div class="verdict v-{{ r.gate.decision }}">{{ r.gate.decision }}</div>
+    <div>
+      <div class="kpis">
+        <div class="kpi"><b>{{ r.gate.counts.critical }}</b><span>critical</span></div>
+        <div class="kpi"><b>{{ r.gate.counts.major }}</b><span>major</span></div>
+        <div class="kpi"><b>{{ r.gate.counts.minor }}</b><span>minor</span></div>
+        <div class="kpi"><b>{{ fleet_count }}</b><span>fleet-wide</span></div>
+        <div class="kpi"><b>{{ local_count }}</b><span>vehicle-local</span></div>
+      </div>
+      <div class="narr">{{ r.narrative }}</div>
+      <div class="muted" style="font-size:12px;margin-top:6px">summary source: {{ r.narrative_source }}</div>
+    </div>
+  </section>
+
+  {% if evaluation %}
+  <h2>Detector evaluation against injected ground truth</h2>
+  <div class="panel tbl">
+    <table>
+      <tr><th>Method</th><th>Recall</th><th>Precision</th><th>Findings</th><th>False positives</th></tr>
+      <tr><td><b>otasentry</b> (context-matched)</td><td>{{ evaluation.ours.recall if evaluation.ours.recall is not none else "n/a" }}</td><td>{{ evaluation.ours.precision }}</td>
+          <td>{{ evaluation.ours.n_findings }}</td><td><code>{{ evaluation.ours.false_positives|join(", ") or "none" }}</code></td></tr>
+      <tr><td>Naive raw-signal diff</td><td>{{ evaluation.naive.recall if evaluation.naive.recall is not none else "n/a" }}</td><td>{{ evaluation.naive.precision }}</td>
+          <td>{{ evaluation.naive.n_findings }}</td><td><code>{{ evaluation.naive.false_positives|join(", ") or "none" }}</code></td></tr>
+    </table>
+    <table style="margin-top:12px">
+      <tr><th>Injected regression</th><th>Detected</th><th>Domain correct</th></tr>
+      {% for k, v in evaluation.ours.detected.items() %}
+      <tr><td>{{ k }}</td><td>{{ "yes" if v else "MISSED" }}</td>
+          <td>{{ {True: "yes", False: "no", None: "-"}[evaluation.ours.domain_correct[k]] }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% endif %}
+
+  <h2>Findings</h2>
+  {% for f in r.findings %}
+  <details class="f" {% if loop.index <= 3 %}open{% endif %}>
+    <summary>
+      <span class="sev sev-{{ f.severity }}">{{ f.severity }}</span>
+      <span><b>{{ f.target }}</b> &middot; {{ f.summary }}</span>
+      <span class="tag">{{ f.scope }} {{ f.vehicles|length }}/{{ f.n_fleet }} &middot; {{ f.domain }}</span>
+    </summary>
+    <div class="fbody">
+      <div>{{ charts[f.fingerprint]|safe }}</div>
+      <div>
+        <table>
+          <tr><th>Kind</th><td>{{ f.kind }} ({{ f.tests|join(", ") }})</td></tr>
+          <tr><th>ECU / owner</th><td>{{ f.ecu }} &middot; {{ f.owner_team }}</td></tr>
+          <tr><th>Criticality</th><td>{{ f.criticality }}</td></tr>
+          <tr><th>Attribution</th><td>{{ f.rationale }}</td></tr>
+          <tr><th>Vehicles</th><td>{{ f.vehicles|join(", ") }}</td></tr>
+          {% if f.evidence.model_r2 is defined %}<tr><th>Model</th><td>R&sup2; {{ f.evidence.model_r2 }} on held-out vehicles; inputs: <code>{{ f.evidence.inputs|join(", ") }}</code></td></tr>{% endif %}
+          {% if f.related_issues %}<tr><th>Similar known issues</th><td>{% for i in f.related_issues %}<div><b>{{ i.id }}</b> {{ i.title }} <span class="muted">({{ i.score }})</span></div>{% endfor %}</td></tr>{% endif %}
+          <tr><th>Fingerprint</th><td><code>{{ f.fingerprint }}</code></td></tr>
+        </table>
+      </div>
+    </div>
+  </details>
+  {% endfor %}
+
+  <h2>Requirements</h2>
+  <div class="panel tbl">
+    <table>
+      <tr><th>ID</th><th>Requirement</th><th>Severity</th><th>Pre pass</th><th>Post pass</th><th>Status</th></tr>
+      {% for q in r.requirements %}
+      <tr><td><code>{{ q.id }}</code></td><td>{{ q.title }}</td><td>{{ q.severity }}</td>
+          <td>{{ q.pre_pass if q.pre_pass is not none else "-" }}{% if q.total %}/{{ q.total }}{% endif %}</td>
+          <td>{{ q.post_pass if q.post_pass is not none else "-" }}{% if q.total %}/{{ q.total }}{% endif %}</td>
+          <td>{{ q.status }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <h2>Baseline coverage</h2>
+  <div class="panel tbl">
+    <p class="muted" style="margin-top:0">Share of post-update operating time whose context (speed, load history, ambient, SOC, ...)
+      was represented in the pre-update baseline. Behavior outside the envelope is not judged; vehicles below
+      {{ (r.meta.thresholds.min_coverage * 100)|round|int }}% are excluded from behavioral tests.</p>
+    <table>
+      <tr><th>Vehicle</th><th>Coverage</th><th></th></tr>
+      {% for v, c in r.coverage.items() %}
+      <tr><td>{{ v }}</td><td>{{ (c * 100)|round(1) }}%</td><td><div class="cov-bar"><i style="width:{{ (c * 100)|round(1) }}%"></i></div></td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <h2>Behavioral models</h2>
+  <div class="panel tbl">
+    <table>
+      <tr><th>Signal</th><th>ECU</th><th>R&sup2; (held-out vehicles)</th><th>Residual scale</th><th>Decorrelation</th><th>Judged</th></tr>
+      {% for m in r.models %}
+      <tr><td>{{ m.signal }}</td><td>{{ m.ecu }}</td><td>{{ m.r2_oof }}</td><td>{{ m.residual_scale }}</td><td>{{ m.stride }} samples</td>
+          <td>{{ "yes" if m.tested else "no: unexplained by context (R2 %.2f, baseline spread %.2f sigma)"|format(m.r2_oof, m.baseline_spread) }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <h2>Message timing (fleet median)</h2>
+  <div class="panel tbl">
+    <table>
+      <tr><th>Message</th><th>Nominal</th><th>p99 pre</th><th>p99 post</th><th>Drops pre</th><th>Drops post</th><th>First frame pre</th><th>First frame post</th></tr>
+      {% for t in timing_summary %}
+      <tr><td>{{ t.message }}</td><td>{{ t.nominal }} ms</td><td>{{ t.p99_pre }} ms</td><td>{{ t.p99_post }} ms</td>
+          <td>{{ t.drop_pre }}</td><td>{{ t.drop_post }}</td><td>{{ t.first_pre }} s</td><td>{{ t.first_post }} s</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</main>
+</body>
+</html>
